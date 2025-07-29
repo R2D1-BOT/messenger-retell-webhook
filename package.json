@@ -1,0 +1,25 @@
+{
+  "name": "messenger-retell-webhook",
+  "version": "1.0.0",
+  "description": "Webhook para conectar Facebook Messenger con Retell AI",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "dev": "nodemon index.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "axios": "^1.6.0"
+  },
+  "engines": {
+    "node": ">=16.0.0"
+  },
+  "keywords": [
+    "messenger",
+    "retell-ai",
+    "webhook",
+    "chatbot"
+  ],
+  "author": "Tu Nombre",
+  "license": "MIT"
+}
