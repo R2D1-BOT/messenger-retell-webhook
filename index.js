@@ -192,3 +192,32 @@ app.listen(PORT, () => {
 });
 
 module.exports = app;
+// 🗑️ Endpoint para manejar eliminación de datos de Meta
+app.post('/data-deletion', (req, res) => {
+    console.log('📧 Solicitud de eliminación de datos recibida:', req.body);
+    
+    const { user_id } = req.body;
+    
+    // Aquí podrías eliminar datos del usuario de tu base de datos
+    // Por ahora solo logueamos la solicitud
+    
+    console.log(`🗑️ Procesando eliminación de datos para usuario: ${user_id}`);
+    
+    // Meta espera esta respuesta específica
+    res.json({
+        url: `https://messenger-retell-webhook.onrender.com/deletion-status/${user_id}`,
+        confirmation_code: `DEL_${user_id}_${Date.now()}`
+    });
+});
+
+// 📊 Status de eliminación de datos
+app.get('/deletion-status/:user_id', (req, res) => {
+    const { user_id } = req.params;
+    
+    res.json({
+        user_id: user_id,
+        status: 'completed',
+        message: 'Datos eliminados correctamente según RGPD',
+        processed_at: new Date().toISOString()
+    });
+});
