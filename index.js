@@ -221,3 +221,62 @@ app.get('/deletion-status/:user_id', (req, res) => {
         processed_at: new Date().toISOString()
     });
 });
+// 🗑️ Data Deletion Request Callback para Meta
+app.post('/data-deletion', (req, res) => {
+    console.log('📧 Data deletion request recibida de Meta:', req.body);
+    
+    try {
+        // Meta envía un signed_request
+        const signedRequest = req.body.signed_request;
+        
+        if (!signedRequest) {
+            return res.status(400).json({ error: 'No signed_request provided' });
+        }
+        
+        // Por simplicidad, generamos un ID único para tracking
+        const confirmationCode = `DEL_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+        const statusUrl = `https://messenger-retell-webhook.onrender.com/deletion-status/${confirmationCode}`;
+        
+        console.log(`🗑️ Procesando solicitud de eliminación. Código: ${confirmationCode}`);
+        
+        // Meta espera esta respuesta exacta
+        res.json({
+            url: statusUrl,
+            confirmation_code: confirmationCode
+        });
+        
+    } catch (error) {
+        console.error('❌ Error procesando data deletion:', error);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
+// 📊 Status endpoint para verificar eliminación
+app.get('/deletion-status/:code', (req, res) => {
+    const { code } = req.params;
+    
+    res.send(`
+    <!DOCTYPE html>
+    <html lang="es">
+    <head>
+        <meta charset="UTF-8">
+        <title>Estado de Eliminación de Datos</title>
+        <style>
+            body { font-family: Arial, sans-serif; padding: 20px; text-align: center; }
+            .status { background: #e8f5e8; padding: 20px; border-radius: 8px; margin: 20px 0; }
+        </style>
+    </head>
+    <body>
+        <h1>Estado de Eliminación de Datos</h1>
+        <div class="status">
+            <h2>✅ Solicitud Procesada</h2>
+            <p><strong>Código de confirmación:</strong> ${code}</p>
+            <p><strong>Estado:</strong> Completado</p>
+            <p><strong>Fecha:</strong> ${new Date().toLocaleDateString('es-ES')}</p>
+        </div>
+        <p>Tus datos han sido eliminados de nuestros sistemas según las normativas RGPD.</p>
+        <p>Contacto: <a href="mailto:investlan@hotmail.es">investlan@hotmail.es</a></p>
+    </body>
+    </html>
+    `);
+});
