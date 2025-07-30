@@ -1,5 +1,6 @@
 const express = require('express');
 const axios = require('axios');
+const crypto = require('crypto');
 const app = express();
 
 // Configuración
@@ -8,6 +9,7 @@ const VERIFY_TOKEN = process.env.VERIFY_TOKEN || 'messenger_verify_123';
 const PAGE_ACCESS_TOKEN = process.env.PAGE_ACCESS_TOKEN;
 const RETELL_API_KEY = process.env.RETELL_API_KEY || 'key_7e77c634b8d3c2c74783639a1cd0';
 const RETELL_AGENT_ID = process.env.RETELL_AGENT_ID || 'agent_8bb084b488139c5d3898c2878d';
+const APP_SECRET = process.env.APP_SECRET;
 
 app.use(express.json());
 
@@ -139,105 +141,29 @@ async function sendMessage(recipientId, messageText) {
     }
 }
 
-// Ruta principal
-app.get('/', (req, res) => {
-    res.json({
-        status: 'online',
-        service: 'Messenger + Retell AI Webhook',
-        agent_id: RETELL_AGENT_ID,
-        webhook_url: '/webhook',
-        verify_token: VERIFY_TOKEN,
-        timestamp: new Date().toISOString(),
-        configuration: {
-            retell_configured: !!RETELL_API_KEY,
-            messenger_configured: !!PAGE_ACCESS_TOKEN,
-            verify_token_set: !!VERIFY_TOKEN
-        }
-    });
-});
-
-// Ruta de estado
-app.get('/status', (req, res) => {
-    res.json({
-        webhook_active: true,
-        retell_agent: RETELL_AGENT_ID,
-        configurations: {
-            verify_token: !!VERIFY_TOKEN,
-            page_token: !!PAGE_ACCESS_TOKEN,
-            retell_key: !!RETELL_API_KEY
-        },
-        endpoints: {
-            webhook: '/webhook',
-            status: '/status',
-            home: '/'
-        }
-    });
-});
-
-// Manejo de errores
-app.use((err, req, res, next) => {
-    console.error('💥 Error del servidor:', err);
-    res.status(500).json({
-        error: 'Error interno del servidor',
-        timestamp: new Date().toISOString()
-    });
-});
-
-app.listen(PORT, () => {
-    console.log(`\n🚀 Webhook Messenger + Retell AI`);
-    console.log(`📡 Puerto: ${PORT}`);
-    console.log(`🤖 Agente: ${RETELL_AGENT_ID}`);
-    console.log(`🔑 Verify Token: ${VERIFY_TOKEN}`);
-    console.log(`✅ Servidor iniciado correctamente\n`);
-});
-
-module.exports = app;
-// 🗑️ Endpoint para manejar eliminación de datos de Meta
-app.post('/data-deletion', (req, res) => {
-    console.log('📧 Solicitud de eliminación de datos recibida:', req.body);
-    
-    const { user_id } = req.body;
-    
-    // Aquí podrías eliminar datos del usuario de tu base de datos
-    // Por ahora solo logueamos la solicitud
-    
-    console.log(`🗑️ Procesando eliminación de datos para usuario: ${user_id}`);
-    
-    // Meta espera esta respuesta específica
-    res.json({
-        url: `https://messenger-retell-webhook.onrender.com/deletion-status/${user_id}`,
-        confirmation_code: `DEL_${user_id}_${Date.now()}`
-    });
-});
-
-// 📊 Status de eliminación de datos
-app.get('/deletion-status/:user_id', (req, res) => {
-    const { user_id } = req.params;
-    
-    res.json({
-        user_id: user_id,
-        status: 'completed',
-        message: 'Datos eliminados correctamente según RGPD',
-        processed_at: new Date().toISOString()
-    });
-});
-// 🗑️ Data Deletion Request Callback para Meta
+// 🗑️ Data Deletion Request Callback para Meta (ÚNICO)
 app.post('/data-deletion', (req, res) => {
     console.log('📧 Data deletion request recibida de Meta:', req.body);
     
     try {
-        // Meta envía un signed_request
         const signedRequest = req.body.signed_request;
         
         if (!signedRequest) {
             return res.status(400).json({ error: 'No signed_request provided' });
         }
         
-        // Por simplicidad, generamos un ID único para tracking
-        const confirmationCode = `DEL_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+        // Parsear signed request de Meta
+        const data = parseSignedRequest(signedRequest, APP_SECRET);
+        
+        if (!data) {
+            return res.status(400).json({ error: 'Invalid signed request' });
+        }
+        
+        const userId = data.user_id;
+        const confirmationCode = `DEL_${userId}_${Date.now()}`;
         const statusUrl = `https://messenger-retell-webhook.onrender.com/deletion-status/${confirmationCode}`;
         
-        console.log(`🗑️ Procesando solicitud de eliminación. Código: ${confirmationCode}`);
+        console.log(`🗑️ Procesando eliminación para usuario: ${userId}, código: ${confirmationCode}`);
         
         // Meta espera esta respuesta exacta
         res.json({
@@ -251,32 +177,51 @@ app.post('/data-deletion', (req, res) => {
     }
 });
 
+// Función para parsear signed request de Meta
+function parseSignedRequest(signedRequest, appSecret) {
+    try {
+        if (!appSecret) {
+            console.error('❌ APP_SECRET no configurado');
+            return null;
+        }
+        
+        const [encodedSig, payload] = signedRequest.split('.', 2);
+        
+        if (!encodedSig || !payload) {
+            return null;
+        }
+        
+        // Decodificar
+        const sig = base64UrlDecode(encodedSig);
+        const data = JSON.parse(base64UrlDecode(payload));
+        
+        // Verificar firma
+        const expectedSig = crypto.createHmac('sha256', appSecret).update(payload).digest();
+        
+        if (!crypto.timingSafeEqual(sig, expectedSig)) {
+            console.error('❌ Invalid signature in signed request');
+            return null;
+        }
+        
+        return data;
+        
+    } catch (error) {
+        console.error('❌ Error parsing signed request:', error);
+        return null;
+    }
+}
+
+// Helper para decodificar base64 URL-safe
+function base64UrlDecode(str) {
+    str = str.replace(/-/g, '+').replace(/_/g, '/');
+    while (str.length % 4) {
+        str += '=';
+    }
+    return Buffer.from(str, 'base64');
+}
+
 // 📊 Status endpoint para verificar eliminación
 app.get('/deletion-status/:code', (req, res) => {
     const { code } = req.params;
     
-    res.send(`
-    <!DOCTYPE html>
-    <html lang="es">
-    <head>
-        <meta charset="UTF-8">
-        <title>Estado de Eliminación de Datos</title>
-        <style>
-            body { font-family: Arial, sans-serif; padding: 20px; text-align: center; }
-            .status { background: #e8f5e8; padding: 20px; border-radius: 8px; margin: 20px 0; }
-        </style>
-    </head>
-    <body>
-        <h1>Estado de Eliminación de Datos</h1>
-        <div class="status">
-            <h2>✅ Solicitud Procesada</h2>
-            <p><strong>Código de confirmación:</strong> ${code}</p>
-            <p><strong>Estado:</strong> Completado</p>
-            <p><strong>Fecha:</strong> ${new Date().toLocaleDateString('es-ES')}</p>
-        </div>
-        <p>Tus datos han sido eliminados de nuestros sistemas según las normativas RGPD.</p>
-        <p>Contacto: <a href="mailto:investlan@hotmail.es">investlan@hotmail.es</a></p>
-    </body>
-    </html>
-    `);
-});
+    res
