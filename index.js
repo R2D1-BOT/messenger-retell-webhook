@@ -224,4 +224,38 @@ function base64UrlDecode(str) {
 app.get('/deletion-status/:code', (req, res) => {
     const { code } = req.params;
     
-    res
+    res.send(`
+    <!DOCTYPE html>
+    <html lang="es">
+    <head>
+        <meta charset="UTF-8">
+        <title>Estado de Eliminación de Datos</title>
+        <style>
+            body { font-family: Arial, sans-serif; padding: 20px; text-align: center; }
+            .status { background: #e8f5e8; padding: 20px; border-radius: 8px; margin: 20px 0; }
+        </style>
+    </head>
+    <body>
+        <h1>Estado de Eliminación de Datos</h1>
+        <div class="status">
+            <h2>✅ Solicitud Procesada</h2>
+            <p><strong>Código de confirmación:</strong> ${code}</p>
+            <p><strong>Estado:</strong> Completado</p>
+            <p><strong>Fecha:</strong> ${new Date().toLocaleDateString('es-ES')}</p>
+        </div>
+        <p>Tus datos han sido eliminados de nuestros sistemas según las normativas RGPD.</p>
+        <p>Contacto: <a href="mailto:investlan@hotmail.es">investlan@hotmail.es</a></p>
+    </body>
+    </html>
+    `);
+});
+
+app.listen(PORT, () => {
+    console.log(`\n🚀 Webhook Messenger + Retell AI`);
+    console.log(`📡 Puerto: ${PORT}`);
+    console.log(`🤖 Agente: ${RETELL_AGENT_ID}`);
+    console.log(`🔑 Verify Token: ${VERIFY_TOKEN}`);
+    console.log(`✅ Servidor iniciado correctamente\n`);
+});
+
+module.exports = app;
