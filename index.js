@@ -5,7 +5,7 @@ const app = express();
 
 // Configuración
 const PORT = process.env.PORT || 10000;
-const VERIFY_TOKEN = process.env.VERIFY_TOKEN || 'messenger_verify_123';
+const VERIFY_TOKEN = process.env.VERIFY_TOKEN || 'mi_token_secreto_123';
 const PAGE_ACCESS_TOKEN = process.env.PAGE_ACCESS_TOKEN;
 const RETELL_API_KEY = process.env.RETELL_API_KEY || 'key_7e77c634b8d3c2c74783639a1cd0';
 const RETELL_AGENT_ID = process.env.RETELL_AGENT_ID || 'agent_8bb084b488139c5d3898c2878d';
@@ -141,7 +141,7 @@ async function sendMessage(recipientId, messageText) {
     }
 }
 
-// 🗑️ Data Deletion Request Callback para Meta (ÚNICO)
+// 🗑️ Data Deletion Request Callback para Meta
 app.post('/data-deletion', (req, res) => {
     console.log('📧 Data deletion request recibida de Meta:', req.body);
     
@@ -250,11 +250,92 @@ app.get('/deletion-status/:code', (req, res) => {
     `);
 });
 
+// 📄 Privacy Policy endpoint
+app.get('/privacy-policy', (req, res) => {
+    res.send(`
+    <!DOCTYPE html>
+    <html lang="es">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Política de Privacidad</title>
+        <style>
+            body {
+                font-family: Arial, sans-serif;
+                margin: 20px;
+                padding: 20px;
+                background-color: #f9f9f9;
+            }
+            h1, h2 {
+                color: #333;
+            }
+            p {
+                color: #666;
+            }
+        </style>
+    </head>
+    <body>
+        <h1>Política de Privacidad</h1>
+        <p><strong>Fecha de Última Actualización: 30 de julio de 2025</strong></p>
+        <h2>1. Información que Recopilamos</h2>
+        <p>Recopilamos la siguiente información cuando usas nuestros servicios:</p>
+        <ul>
+            <li>Datos personales proporcionados (nombre, número de teléfono, etc.).</li>
+            <li>Datos de agenda para programar y gestionar citas.</li>
+            <li>Datos técnicos (dirección IP, tipo de dispositivo, sistema operativo).</li>
+        </ul>
+        <h2>2. Uso de la Información</h2>
+        <p>Utilizamos los datos recopilados para:</p>
+        <ul>
+            <li>Agendar y gestionar citas con Google Calendar.</li>
+            <li>Mejorar la experiencia del usuario y optimizar nuestros servicios.</li>
+            <li>Cumplir con obligaciones legales y responder a solicitudes de las autoridades.</li>
+        </ul>
+        <h2>3. Derechos del Usuario</h2>
+        <p>Los usuarios en la UE tienen derecho a:</p>
+        <ul>
+            <li>Acceder, rectificar o eliminar sus datos personales.</li>
+            <li>Solicitar la portabilidad de los datos.</li>
+            <li>Oponerse al procesamiento de sus datos.</li>
+        </ul>
+        <h2>4. Retención y Eliminación de Datos</h2>
+        <p>Mantenemos los datos solo durante el tiempo necesario para los fines establecidos. Los usuarios pueden solicitar la eliminación de sus datos en cualquier momento enviando un correo a:</p>
+        <p><strong>investlan@hotmail.es</strong></p>
+        <h2>5. Datos de la Empresa</h2>
+        <p><strong>Nombre de la Empresa:</strong> R2D1 BOT</p>
+        <p><strong>Dirección:</strong> Calle Rechaval, N°22, Yaiza, Lanzarote, Las Palmas de Gran Canaria, España.</p>
+        <p><strong>Correo Electrónico de Contacto:</strong> investlan@hotmail.es</p>
+        <h2>6. Contacto</h2>
+        <p>Si tienes preguntas sobre esta política, puedes contactarnos en: <strong>investlan@hotmail.es</strong></p>
+    </body>
+    </html>
+    `);
+});
+
+// Ruta principal
+app.get('/', (req, res) => {
+    res.json({
+        status: 'online',
+        service: 'Messenger + Retell AI Webhook',
+        agent_id: RETELL_AGENT_ID,
+        webhook_url: '/webhook',
+        verify_token: VERIFY_TOKEN,
+        timestamp: new Date().toISOString(),
+        configuration: {
+            retell_configured: !!RETELL_API_KEY,
+            messenger_configured: !!PAGE_ACCESS_TOKEN,
+            verify_token_set: !!VERIFY_TOKEN,
+            app_secret_set: !!APP_SECRET
+        }
+    });
+});
+
 app.listen(PORT, () => {
     console.log(`\n🚀 Webhook Messenger + Retell AI`);
     console.log(`📡 Puerto: ${PORT}`);
     console.log(`🤖 Agente: ${RETELL_AGENT_ID}`);
     console.log(`🔑 Verify Token: ${VERIFY_TOKEN}`);
+    console.log(`🗝️ App Secret: ${APP_SECRET ? 'Configurado' : 'NO CONFIGURADO'}`);
     console.log(`✅ Servidor iniciado correctamente\n`);
 });
 
